@@ -1,15 +1,14 @@
-# Compiler
+# Compiler settings
 CXX = g++
-CXXFLAGS = -std=c++20 -Wall -Wextra -pedantic
+CXXFLAGS = -std=c++20 -Wall
 
-# Targets
-all: test_robot
+# The final executable name
+TARGET = RobotWarz
 
-RobotBase.o: RobotBase.cpp RobotBase.h
-	$(CXX) $(CXXFLAGS) -c RobotBase.cpp
+# Build the main executable
+$(TARGET): main.cpp Arena.cpp RobotBase.o
+	$(CXX) $(CXXFLAGS) main.cpp Arena.cpp RobotBase.o -o $(TARGET)
 
-test_robot: test_robot.cpp RobotBase.o
-	$(CXX) $(CXXFLAGS) test_robot.cpp RobotBase.o -ldl -o test_robot
-
+# Clean up compiled files
 clean:
-	rm -f *.o test_robot *.so
+	rm -f $(TARGET)
