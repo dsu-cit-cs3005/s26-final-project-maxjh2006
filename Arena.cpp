@@ -239,8 +239,22 @@ void Arena::update_board() {
 
 void Arena::print_board(int round_number) {
     std::cout << "\033[2J\033[1;1H";
-    
+
     std::cout << "\n        =========== starting round " << round_number << " ===========\n\n";
+
+    std::cout << "  --- COMPETITOR STATUS --------------------------------------\n";
+    
+    for (RobotBase* robot : m_robots) {
+        // Switched from get_armor() to get_health()!
+        if (robot->get_health() > 0) {
+            std::cout << "  [ALIVE] " << robot->m_name 
+                      << " | Health: " << robot->get_health() 
+                      << " | Speed: " << robot->get_move_speed() << "\n";
+        } else {
+            std::cout << "  \033[31m[DEAD]  " << robot->m_name << "\033[0m\n";
+        }
+    }
+    std::cout << "  ------------------------------------------------------------\n\n";
 
     // Print column headers
     std::cout << "    ";
