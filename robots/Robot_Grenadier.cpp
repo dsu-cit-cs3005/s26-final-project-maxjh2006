@@ -57,4 +57,4 @@ public:
 };
 
 extern "C" RobotBase* create_robot() { return new Robot_Grenadier(); }
-extern "C" const char* robot_summary() { return "Lobs AoE explosives, panics when out of ammo."; }
+extern "C" const char* robot_summary() { return "explosives, panics when out."; }

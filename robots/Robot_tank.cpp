@@ -49,4 +49,4 @@ public:
 };
 
 extern "C" RobotBase* create_robot() { return new Robot_Tank(); }
-extern "C" const char* robot_summary() { return "Slow, heavily armored flamethrower."; }
+extern "C" const char* robot_summary() { return "Slow, armored flamethrower."; }

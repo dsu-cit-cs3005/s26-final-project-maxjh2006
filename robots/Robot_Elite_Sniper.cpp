@@ -69,5 +69,5 @@ extern "C" RobotBase* create_robot() {
 }
 
 extern "C" const char* robot_summary() {
-    return "Sweeps radar, railguns targets, moves randomly.";
+    return "Sweeps radar, railguns, moves randomly.";
 }

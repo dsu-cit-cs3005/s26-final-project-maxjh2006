@@ -80,4 +80,4 @@ public:
 };
 
 extern "C" RobotBase* create_robot() { return new Robot_Berserker(); }
-extern "C" const char* robot_summary() { return "Hunts targets systematically and paces its movement."; }
+extern "C" const char* robot_summary() { return "Hunts targets systematically"; }

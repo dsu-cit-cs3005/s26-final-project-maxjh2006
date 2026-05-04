@@ -101,4 +101,4 @@ public:
 };
 
 extern "C" RobotBase* create_robot() { return new Robot_Apex(); }
-extern "C" const char* robot_summary() { return "Tournament Build: Kites enemies and calculates perfect railgun geometry."; }
+extern "C" const char* robot_summary() { return "Kites enemies and fires perfect railgun shots."; }
