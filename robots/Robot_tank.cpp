@@ -9,7 +9,6 @@ private:
     bool m_has_target;
 
 public:
-    // Trade-off: 1 Move, 6 Armor (Total 7). Weapon: Flamethrower.
     Robot_Tank() : RobotBase(1, 6, flamethrower) {
         m_name = "HeavyTank";
         m_current_radar_dir = 1;
@@ -17,7 +16,6 @@ public:
     }
 
     void get_radar_direction(int& radar_direction) override {
-        // Sweep radar in a circle
         radar_direction = m_current_radar_dir;
         m_current_radar_dir = (m_current_radar_dir % 8) + 1;
     }
@@ -39,13 +37,12 @@ public:
             shot_row = m_target_row;
             shot_col = m_target_col;
             m_has_target = false; 
-            return true; // Burn them!
+            return true; 
         }
         return false; 
     }
 
     void get_move_direction(int& direction, int& distance) override {
-        // Plod forward randomly
         direction = (std::rand() % 8) + 1; 
         distance = get_move_speed(); 
     }

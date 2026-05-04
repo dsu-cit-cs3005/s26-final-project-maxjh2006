@@ -18,7 +18,6 @@ int main(int argc, char* argv[]) {
     }
 
     // 2. Load the robots from the "robots" directory
-    // Ensure you have a folder named "robots" in the same directory as the executable!
     if (!arena.load_robots("robots")) {
         std::cerr << "No robots loaded. Exiting.\n";
         return 1;

@@ -28,7 +28,6 @@ bool Arena::load_config(const std::string& config_filename) {
 
     std::string line;
     while (std::getline(file, line)) {
-        // Skip empty lines
         if (line.empty()) continue;
 
         std::istringstream iss(line);
@@ -42,7 +41,6 @@ bool Arena::load_config(const std::string& config_filename) {
 
             // Route the value to the correct class member
             if (key == "Arena_Size") {
-                // Arena size has two variables separated by a space, so we use another stringstream
                 std::istringstream val_stream(value);
                 val_stream >> m_height >> m_width;
             } else if (key == "Max_Rounds") {
@@ -64,23 +62,19 @@ bool Arena::load_config(const std::string& config_filename) {
 
     file.close();
 
-    // Now that we have the height and width, resize the 2D board vector and fill it with '.'
     m_board.assign(m_height, std::vector<char>(m_width, '.'));
     
     std::cout << "Successfully loaded configuration. Board sized to " << m_height << "x" << m_width << ".\n";
     return true;
 }
 
-// --- Add this to your Arena.cpp ---
 
 Arena::~Arena() {
-    // Delete the robot objects to avoid memory leaks
     for (RobotBase* robot : m_robots) {
         delete robot;
     }
     m_robots.clear();
 
-    // Close the shared library handles
     for (void* handle : m_lib_handles) {
         if (handle) {
             dlclose(handle);
@@ -90,48 +84,40 @@ Arena::~Arena() {
 }
 
 bool Arena::load_robots(const std::string& robots_directory) {
-    // A list of unique characters to represent our robots on the board
     std::string markers = "@#$%&!*^~?";
     int marker_idx = 0;
 
-    // Check if the robots directory actually exists
     if (!std::filesystem::exists(robots_directory) || !std::filesystem::is_directory(robots_directory)) {
         std::cerr << "Error: Directory '" << robots_directory << "' not found.\n";
         return false;
     }
 
-    // Traverse the directory looking for our contestants
     for (const auto& entry : std::filesystem::directory_iterator(robots_directory)) {
         if (!entry.is_regular_file()) continue;
 
         std::string filepath = entry.path().string();
         std::string filename = entry.path().filename().string();
 
-        // We only care about files starting with "Robot_" and ending in ".cpp"
         if (filename.find("Robot_") == 0 && filename.find(".cpp") != std::string::npos) {
             
-            // Create the .so filename (e.g., robots/Robot_Ratboy.so)
             std::string shared_lib = filepath.substr(0, filepath.find_last_of('.')) + ".so";
 
-            // 1. Compile the robot code using the command specified in your assignment
             std::string compile_cmd = "g++ -shared -fPIC -o " + shared_lib + " " + filepath + " RobotBase.o -I. -std=c++20";
             std::cout << "Compiling " << filename << " to " << shared_lib << "...\n";
             
             int compile_result = std::system(compile_cmd.c_str());
             if (compile_result != 0) {
                 std::cerr << "Failed to compile " << filename << ".\n";
-                continue; // Skip to the next file if compilation fails
+                continue; 
             }
 
-            // 2. Load the shared library into memory
-            // RTLD_LAZY means resolve symbols as the code that references them is executed
+
             void* handle = dlopen(shared_lib.c_str(), RTLD_LAZY);
             if (!handle) {
                 std::cerr << "Failed to load " << shared_lib << ": " << dlerror() << std::endl;
                 continue;
             }
 
-            // 3. Locate the factory function we need to instantiate the robot
             RobotFactory create_robot = (RobotFactory)dlsym(handle, "create_robot");
             if (!create_robot) {
                 std::cerr << "Failed to find create_robot in " << shared_lib << ": " << dlerror() << std::endl;
@@ -139,17 +125,13 @@ bool Arena::load_robots(const std::string& robots_directory) {
                 continue;
             }
 
-            // 4. Instantiate the robot!
             RobotBase* robot = create_robot();
             if (robot) {
-                // Assign it a unique character for the text board
                 robot->m_character = markers[marker_idx % markers.length()];
                 marker_idx++;
                 
-                // Give the robot the board dimensions so it doesn't try to move out of bounds
                 robot->set_boundaries(m_height, m_width);
 
-                // Save the pointers
                 m_robots.push_back(robot);
                 m_lib_handles.push_back(handle);
                 
@@ -169,16 +151,14 @@ void Arena::place_obstacles() {
     std::uniform_int_distribution<> row_dist(0, m_height - 1);
     std::uniform_int_distribution<> col_dist(0, m_width - 1);
 
-    // A handy lambda function to place a specific number of items
     auto place_item = [&](int count, char symbol) {
         int placed = 0;
-        int max_attempts = m_height * m_width * 10; // Prevent infinite loops
+        int max_attempts = m_height * m_width * 10; 
         
         while (placed < count && max_attempts > 0) {
             int r = row_dist(gen);
             int c = col_dist(gen);
             
-            // Only place on an empty spot
             if (m_board[r][c] == '.') {
                 m_board[r][c] = symbol;
                 placed++;
@@ -198,7 +178,6 @@ void Arena::place_robots() {
     std::uniform_int_distribution<> row_dist(0, m_height - 1);
     std::uniform_int_distribution<> col_dist(0, m_width - 1);
 
-    // The assignment states: "When placing a robot, do not place it on an obstacle."
     for (RobotBase* robot : m_robots) {
         int max_attempts = m_height * m_width * 10;
         
@@ -206,11 +185,9 @@ void Arena::place_robots() {
             int r = row_dist(gen);
             int c = col_dist(gen);
             
-            // Check if the board is empty here
             if (m_board[r][c] == '.') {
                 bool occupied = false;
                 
-                // Ensure we don't drop this robot on top of a previously placed robot
                 for (RobotBase* other : m_robots) {
                     int orow = -1, ocol = -1;
                     other->get_current_location(orow, ocol);
@@ -221,7 +198,7 @@ void Arena::place_robots() {
                 }
                 
                 if (!occupied) {
-                    robot->move_to(r, c); // Tell the robot where it is starting
+                    robot->move_to(r, c); 
                     break;
                 }
             }
@@ -231,10 +208,6 @@ void Arena::place_robots() {
 }
 
 void Arena::update_board() {
-    // We will use this in Phase 4 during the game loop.
-    // When a robot dies, it turns into an obstacle ('X'). 
-    // If it dies on a Flamethrower ('F'), it overwrites it. 
-    // For now, it remains empty as we render robots dynamically in print_board.
 }
 
 void Arena::print_board(int round_number) {
@@ -245,7 +218,6 @@ void Arena::print_board(int round_number) {
     std::cout << "  --- COMPETITOR STATUS --------------------------------------\n";
     
     for (RobotBase* robot : m_robots) {
-        // Switched from get_armor() to get_health()!
         if (robot->get_health() > 0) {
             std::cout << "  [ALIVE] " << robot->m_name 
                       << " | Health: " << robot->get_health() 
@@ -256,7 +228,6 @@ void Arena::print_board(int round_number) {
     }
     std::cout << "  ------------------------------------------------------------\n\n";
 
-    // Print column headers
     std::cout << "    ";
     for (int c = 0; c < m_width; ++c) {
         std::cout << std::setw(2) << c << " ";
@@ -264,15 +235,13 @@ void Arena::print_board(int round_number) {
     std::cout << "\n";
 
     for (int r = 0; r < m_height; ++r) {
-        // Print row header
         std::cout << std::setw(2) << r << " ";
         
         for (int c = 0; c < m_width; ++c) {
             std::string cell_display = " . ";
-            char base_item = m_board[r][c]; // Get terrain (M, P, F, or .)
+            char base_item = m_board[r][c]; 
             bool robot_here = false;
 
-            // Check if there is a robot on this cell
             for (RobotBase* robot : m_robots) {
                 int rob_r, rob_c;
                 robot->get_current_location(rob_r, rob_c);
