@@ -92,15 +92,26 @@ bool Arena::load_robots(const std::string& robots_directory) {
         return false;
     }
 
+    std::vector<std::string> loaded_libs; // Keep track of what we've loaded
+
     for (const auto& entry : std::filesystem::directory_iterator(robots_directory)) {
         if (!entry.is_regular_file()) continue;
 
         std::string filepath = entry.path().string();
         std::string filename = entry.path().filename().string();
 
-        if (filename.find("Robot_") == 0 && filename.find(".cpp") != std::string::npos) {
+        if (filename.find("Robot_") != 0) continue; // Must start with Robot_
+
+        std::string shared_lib = "";
+
+        if (filename.find(".cpp") != std::string::npos) {
+            // Scenario A: It's a source code file. Compile it!
+            shared_lib = filepath.substr(0, filepath.find_last_of('.')) + ".so";
             
-            std::string shared_lib = filepath.substr(0, filepath.find_last_of('.')) + ".so";
+            // Check if we already loaded the pre-compiled version of this
+            if (std::find(loaded_libs.begin(), loaded_libs.end(), shared_lib) != loaded_libs.end()) {
+                continue; 
+            }
 
             std::string compile_cmd = "g++ -shared -fPIC -o " + shared_lib + " " + filepath + " RobotBase.o -I. -std=c++20";
             std::cout << "Compiling " << filename << " to " << shared_lib << "...\n";
@@ -110,34 +121,43 @@ bool Arena::load_robots(const std::string& robots_directory) {
                 std::cerr << "Failed to compile " << filename << ".\n";
                 continue; 
             }
-
-
-            void* handle = dlopen(shared_lib.c_str(), RTLD_LAZY);
-            if (!handle) {
-                std::cerr << "Failed to load " << shared_lib << ": " << dlerror() << std::endl;
-                continue;
+        } 
+        else if (filename.find(".so") != std::string::npos) {
+            shared_lib = filepath;
+            
+            if (std::find(loaded_libs.begin(), loaded_libs.end(), shared_lib) != loaded_libs.end()) {
+                continue; 
             }
+        } 
+        else {
+            continue; 
+        }
 
-            RobotFactory create_robot = (RobotFactory)dlsym(handle, "create_robot");
-            if (!create_robot) {
-                std::cerr << "Failed to find create_robot in " << shared_lib << ": " << dlerror() << std::endl;
-                dlclose(handle);
-                continue;
-            }
+        void* handle = dlopen(shared_lib.c_str(), RTLD_LAZY);
+        if (!handle) {
+            std::cerr << "Failed to load " << shared_lib << ": " << dlerror() << std::endl;
+            continue;
+        }
 
-            RobotBase* robot = create_robot();
-            if (robot) {
-                robot->m_character = markers[marker_idx % markers.length()];
-                marker_idx++;
-                
-                robot->set_boundaries(m_height, m_width);
+        RobotFactory create_robot = (RobotFactory)dlsym(handle, "create_robot");
+        if (!create_robot) {
+            std::cerr << "Failed to find create_robot in " << shared_lib << ": " << dlerror() << std::endl;
+            dlclose(handle);
+            continue;
+        }
 
-                m_robots.push_back(robot);
-                m_lib_handles.push_back(handle);
-                
-                std::cout << "Successfully loaded robot: " << robot->m_name 
-                          << " (" << robot->m_character << ")\n";
-            }
+        RobotBase* robot = create_robot();
+        if (robot) {
+            robot->m_character = markers[marker_idx % markers.length()];
+            marker_idx++;
+            robot->set_boundaries(m_height, m_width);
+
+            m_robots.push_back(robot);
+            m_lib_handles.push_back(handle);
+            loaded_libs.push_back(shared_lib); 
+            
+            std::cout << "Successfully loaded robot: " << robot->m_name 
+                      << " (" << robot->m_character << ")\n";
         }
     }
 
